@@ -64,19 +64,19 @@ export const createMutationList = async (
 // Изменить список мутаций
 // https://testapi1.parseq.pro/lists/testT/mutations
 export const updateMutationList = async (
-  listId: string,
-  name: string,
-  description: string
+  oldName: string,
+  newName: string
 ): Promise<MutationList> => {
   try {
-    const response = await axios.put<{ list: MutationList }>(
-      `${API_URL}/lists/${name}/mutations`,
-      {
-        name,
-        description,
-      }
-    );
-    return response.data.list;
+    // 1. Create new list with the new name
+    const newList = await createMutationList(newName);
+    // 2. Copy mutations from old list to new list
+    // await addMutationToList(newName, useMutationStore.MutationList .description.split(','));
+
+    // 3. Delete old list
+    // await deleteMutationList(oldName);
+
+    return newList;
   } catch (error) {
     console.error('Error updating mutation list:', error);
     throw error;
@@ -101,7 +101,6 @@ export const addMutationToList = async (
   mutations: string[]
 ): Promise<void> => {
   try {
-    // Отправляем массив мутаций через PATCH
     await axios.patch(`${API_URL}lists/${listName}/mutations`, mutations);
   } catch (error) {
     console.error('Error adding mutations to list:', error);

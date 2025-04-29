@@ -1,42 +1,42 @@
 <template>
-  <div class="container" >
-    <div class="header__row">      
-      <button @click="toggleAllMutationsList">Все мутации </button> 
-      <button @click="toggleMutationListSidebar">Ваши сохраненные списки : {{selectedListName}}</button>    
-     
-      
-      
-      
+  <div class="container">
+    <div class="header__row">
+      <button @click="toggleAllMutationsList">Все мутации</button>
+      <button @click="toggleMutationListSidebar">
+        Ваши сохраненные списки : {{ selectedListName }}
+      </button>
     </div>
-    <MutationListSidebar 
-          v-if="isMutationListSidebarVisible"
-          :selectedListName="selectedListName" 
-          @list-selected="onListSelected" 
-          class="sidebar"
-           @close="toggleMutationListSidebar"
-        />
-    
+    <MutationListSidebar
+      v-if="isMutationListSidebarVisible"
+      :selectedListName="selectedListName"
+      @list-selected="onListSelected"
+      class="sidebar"
+      @close="toggleMutationListSidebar"
+      ref="sidebarRef"
+    />
+
     <div class="main-content">
       <div class="main-content-left">
         <AllMutationsList
           v-if="isAllMutationsListVisible"
           :mutations="mutationStore.mutations"
-          :loading="mutationStore.loading"
-          :error="mutationStore.error"
+          v-memo="[mutationStore.mutations.length]"
         />
+        <!-- :loading="mutationStore.loading"
+        :error="mutationStore.error" -->
       </div>
       <div class="main-content-right">
-        <MutationListPanel 
-          v-if="selectedListName" 
-          :selectedListName="selectedListName"        
-        /> 
-      </div>  
+        <MutationListPanel
+          v-if="selectedListName"
+          :selectedListName="selectedListName"
+        />
+      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, onUnmounted } from 'vue';
 import MutationListSidebar from './components/MutationListSidebar.vue';
 import MutationListPanel from './components/MutationListPanel.vue';
 import AllMutationsList from './components/AllMutationsList.vue';
@@ -47,18 +47,42 @@ const mutationStore = useMutationStore();
 const isMutationListSidebarVisible = ref(false);
 const isAllMutationsListVisible = ref(false);
 
+const sidebarRef = ref<InstanceType<typeof MutationListSidebar> | null>(null);
+
+const handleClick = (event: MouseEvent) => {
+  const target = event.target as HTMLElement;
+  const sidebar = sidebarRef.value?.$el;
+  const toggleButton = document.querySelector(
+    '.header__row button:nth-child(2)'
+  );
+
+  if (
+    isMutationListSidebarVisible.value &&
+    sidebar &&
+    !sidebar.contains(target) &&
+    target !== toggleButton
+  ) {
+    isMutationListSidebarVisible.value = false;
+  }
+};
+
+onMounted(() => {
+  document.addEventListener('click', handleClick);
+});
+
+onUnmounted(() => {
+  document.removeEventListener('click', handleClick);
+});
+
 const toggleMutationListSidebar = () => {
   isMutationListSidebarVisible.value = !isMutationListSidebarVisible.value;
-
 };
 
 const toggleAllMutationsList = () => {
   isAllMutationsListVisible.value = !isAllMutationsListVisible.value;
-
 };
 
-
-const onListSelected = (listName: string) => {  
+const onListSelected = (listName: string) => {
   selectedListName.value = listName;
 };
 
@@ -68,7 +92,6 @@ onMounted(() => {
   }
 
   mutationStore.loadMutationLists();
-
 });
 </script>
 
@@ -93,29 +116,27 @@ onMounted(() => {
 }
 
 .header__row button {
-  min-width: 250px; 
-  height: 40px; 
+  min-width: 250px;
+  height: 40px;
   display: flex;
   justify-content: center;
   align-items: center;
-  white-space: nowrap; 
-  overflow: hidden; 
-  text-overflow: ellipsis; 
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 
   box-sizing: border-box;
   padding: 0 10px;
-  border: 1px solid transparent; 
+  border: 1px solid transparent;
 }
-
 
 .header__row button:active {
   transform: none;
   box-shadow: none;
 }
 
-
 .main-content-right {
-  width: 50%; 
+  width: 50%;
   min-width: 50%;
 }
 
@@ -125,12 +146,12 @@ onMounted(() => {
   justify-content: space-between;
   width: 100%;
   max-width: 1200px;
-  height: calc(100% - 5vh); 
+  height: calc(100% - 5vh);
   overflow: hidden;
 }
 
 .main-content-left {
-  width: 50%; 
+  width: 50%;
   padding: 0 10px;
   height: 100%;
   /* overflow-y: auto;  */

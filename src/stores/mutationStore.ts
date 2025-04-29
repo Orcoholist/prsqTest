@@ -3,6 +3,7 @@ import { ref, computed } from 'vue';
 import type { Mutation } from '../types/mutation';
 import type { MutationList } from '../types/mutationList';
 import * as apiService from '../services/apiService';
+import { shallowRef } from 'vue';
 
 export const useMutationStore = defineStore('mutation', () => {
   const mutations = ref<Mutation[]>([]);
@@ -15,10 +16,6 @@ export const useMutationStore = defineStore('mutation', () => {
   const currentPage = ref(0);
   const pageSize = ref(20);
 
-  const hasMorePages = computed(
-    () => mutations.value.length < totalMutations.value
-  );
-
   const filteredMutations = computed(() => {
     if (!filterText.value) {
       return mutations.value;
@@ -30,8 +27,6 @@ export const useMutationStore = defineStore('mutation', () => {
   });
 
   const selectedList = computed(() => {
-    console.log('selectedListName.value', mutationLists.value);
-
     if (!selectedListName.value) return null;
     return (
       mutationLists.value.find(
@@ -50,7 +45,8 @@ export const useMutationStore = defineStore('mutation', () => {
   const mutationsNotInSelectedList = computed(() => {
     if (!selectedList.value) return [];
     return mutations.value.filter(
-      (mutation) => !selectedList.value?.description.includes(mutation.mutationId)
+      (mutation) =>
+        !selectedList.value?.description.includes(mutation.mutationId)
     );
   });
 
@@ -125,24 +121,44 @@ export const useMutationStore = defineStore('mutation', () => {
     }
   };
 
-  const updateMutationList = async (
-    id: string,
-    name: string,
-    description: string
-  ) => {
+  const updateMutationList = async (oldName: string, newName: string) => {
     loading.value = true;
     error.value = null;
     try {
-      const updatedList = await apiService.updateMutationList(
-        id,
-        name,
-        description
+      // Find current list and get its mutations
+      const currentList = mutationLists.value.find(
+        (list) => list.name === oldName
       );
-      const index = mutationLists.value.findIndex((list) => list.name === id);
-      if (index !== -1) {
-        mutationLists.value[index] = updatedList;
+      if (!currentList) {
+        throw new Error('List not found');
       }
-      return updatedList;
+
+      // Create new list with the new name
+      const newList = await apiService.createMutationList(newName);
+
+      // Copy mutations from old list to new list
+      if (currentList.mutations && currentList.mutations.length > 0) {
+        await apiService.addMutationToList(newName, currentList.mutations);
+      }
+
+      // Delete old list
+      await apiService.deleteMutationList(oldName);
+
+      // Update local state
+      const index = mutationLists.value.findIndex(
+        (list) => list.name === oldName
+      );
+      if (index !== -1) {
+        mutationLists.value.splice(index, 1);
+      }
+      mutationLists.value.push(newList);
+
+      // Update selected list name if needed
+      if (selectedListName.value === oldName) {
+        selectedListName.value = newName;
+      }
+
+      return newList;
     } catch (e: any) {
       error.value = e.message || 'Failed to update mutation list';
       throw e;
@@ -172,35 +188,27 @@ export const useMutationStore = defineStore('mutation', () => {
 
   const addMutationToList = async (listName: string, mutationName: string) => {
     loading.value = true;
-    error.value = null;
 
     try {
-      // Находим список по имени
       const list = mutationLists.value.find((list) => list.name === listName);
-      if (!list) {
-        throw new Error('List not found');
-      }
+      if (!list) throw new Error('List not found');
 
-      // Получаем текущие мутации из списка
       const currentMutations = [...list.mutations];
-
-      // Добавляем новую мутацию, если её ещё нет в списке
       if (!currentMutations.includes(mutationName)) {
         currentMutations.push(mutationName);
       }
 
-      // Вызываем API с правильными аргументами: именем списка и массивом мутаций
-      await apiService.addMutationToList(listName, currentMutations);
-
-      // Обновляем список мутаций в store
       const listIndex = mutationLists.value.findIndex(
-        (list) => list.name === listName
+        (l) => l.name === listName
       );
       if (listIndex !== -1) {
-        if (!mutationLists.value[listIndex].mutations.includes(mutationName)) {
-          mutationLists.value[listIndex].mutations.push(mutationName);
-        }
+        mutationLists.value[listIndex] = {
+          ...mutationLists.value[listIndex],
+          mutations: currentMutations,
+        };
       }
+
+      await apiService.addMutationToList(listName, currentMutations);
     } catch (e: any) {
       error.value = e.message || 'Failed to add mutation to list';
       throw e;

@@ -37,11 +37,14 @@ const props = defineProps<{
 }>();
 
 const selectedList = computed(() => {
-  if (props.selectedListName) {      
-    const list = mutationStore.mutationLists.find((list) => list.name === props.selectedListName);
-    return list || null;
+  if (!props.selectedListName) {
+    return null;
   }
-  return null;
+  
+  const list = mutationStore.mutationLists.find(
+    (list) => list && list.name === props.selectedListName
+  );
+  return list || null;
 });
 
 const removeMutationFromList = (mutationName: string) => {
