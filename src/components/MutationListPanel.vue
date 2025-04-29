@@ -3,13 +3,25 @@
     <div v-if="selectedList" class="panel-content">
       <h2 class="panel-title">{{ selectedList.name }}</h2>
       <p class="panel-description">{{ selectedList.description }}</p>
-      
+
       <h3 class="section-title">Мутации в списке</h3>
-      <div v-if="selectedList.mutations && selectedList.mutations.length > 0" class="mutations-container">
+      <div
+        v-if="selectedList.mutations && selectedList.mutations.length > 0"
+        class="mutations-container"
+        @dragover.prevent
+        @drop="onDrop"
+      >
         <ul class="mutations-list">
-          <li v-for="mutationId in selectedList.mutations" :key="mutationId" class="mutation-item">
+          <li
+            v-for="mutationId in selectedList.mutations"
+            :key="mutationId"
+            class="mutation-item"
+          >
             <span class="mutation-name">{{ mutationId }}</span>
-            <button @click="removeMutationFromList(mutationId)" class="remove-btn">
+            <button
+              @click="removeMutationFromList(mutationId)"
+              class="remove-btn"
+            >
               Удалить
             </button>
           </li>
@@ -40,7 +52,7 @@ const selectedList = computed(() => {
   if (!props.selectedListName) {
     return null;
   }
-  
+
   const list = mutationStore.mutationLists.find(
     (list) => list && list.name === props.selectedListName
   );
@@ -50,6 +62,16 @@ const selectedList = computed(() => {
 const removeMutationFromList = (mutationName: string) => {
   if (selectedList.value) {
     mutationStore.removeMutationFromList(selectedList.value.name, mutationName);
+  }
+};
+const onDrop = (event: DragEvent) => {
+  const mutationData = event.dataTransfer?.getData('mutation');
+  if (mutationData && selectedList.value) {
+    const mutation = JSON.parse(mutationData);
+    mutationStore.addMutationToList(
+      selectedList.value.name,
+      mutation.mutationId
+    );
   }
 };
 </script>
@@ -75,7 +97,7 @@ const removeMutationFromList = (mutationName: string) => {
   font-size: 24px;
   margin-bottom: 10px;
   padding-bottom: 10px;
-  border-bottom: 2px solid #4CAF50;
+  border-bottom: 2px solid #4caf50;
 }
 
 .panel-description {
@@ -110,7 +132,7 @@ const removeMutationFromList = (mutationName: string) => {
   margin-bottom: 8px;
   background-color: white;
   border-radius: 4px;
-  border-left: 4px solid #4CAF50;
+  border-left: 4px solid #4caf50;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   transition: all 0.2s ease;
 }
@@ -172,5 +194,9 @@ const removeMutationFromList = (mutationName: string) => {
   background-color: #f1f1f1;
   border-radius: 8px;
   padding: 20px;
+}
+.mutations-container.drag-over {
+  border: 2px dashed #4caf50;
+  background-color: rgba(76, 175, 80, 0.1);
 }
 </style>

@@ -67,6 +67,8 @@
           v-memo="[mutation.mutationId]"
           class="mutation-item"
           :class="getMutationType(mutation)"
+          draggable="true"
+          @dragstart="onDragStart($event, mutation)"
         >
           <!-- Информация о мутации в зависимости от типа -->
           <div class="mutation-info">
@@ -282,6 +284,10 @@ const loadMoreMutations = async () => {
   } finally {
     isLoadingMore.value = false;
   }
+};
+
+const onDragStart = (event: DragEvent, mutation: Mutation) => {
+  event.dataTransfer?.setData('mutation', JSON.stringify(mutation));
 };
 
 const addMutationToList = (mutationId: string) => {
